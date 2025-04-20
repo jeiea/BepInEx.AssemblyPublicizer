@@ -5,3 +5,9 @@ riderModule.iml
 /_ReSharper.Caches/
 .idea
 *.user
+
+# Visual studio temporary files
+/.vs/
+
+# Visual studio user specific files
+launchSettings.json
