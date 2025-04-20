@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using AsmResolver;
+﻿using AsmResolver;
 using AsmResolver.DotNet;
 using AsmResolver.DotNet.Code.Cil;
+using AsmResolver.DotNet.Signatures.Types;
 using AsmResolver.PE.DotNet.Cil;
 using AsmResolver.PE.DotNet.Metadata.Tables.Rows;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace BepInEx.AssemblyPublicizer;
 
@@ -50,8 +51,18 @@ public static class AssemblyPublicizer
                     continue;
 
                 var newBody = methodDefinition.CilMethodBody = new CilMethodBody(methodDefinition);
-                newBody.Instructions.Add(CilOpCodes.Ldnull);
-                newBody.Instructions.Add(CilOpCodes.Throw);
+                if (methodDefinition.Signature?.ReturnType is TypeSignature returnType)
+                {
+                    foreach (var instruction in GetStub(returnType))
+                    {
+                        newBody.Instructions.Add(instruction);
+                    }
+                }
+                else
+                {
+                    newBody.Instructions.Add(CilOpCodes.Ldnull);
+                    newBody.Instructions.Add(CilOpCodes.Throw);
+                }
                 methodDefinition.NoInlining = true;
             }
         }
@@ -112,6 +123,52 @@ public static class AssemblyPublicizer
                     fieldDefinition.Attributes |= FieldAttributes.Public;
                 }
             }
+        }
+    }
+
+    private static IEnumerable<CilOpCode> GetStub(TypeSignature returnType)
+    {
+        switch (returnType.ElementType)
+        {
+            case ElementType.Boolean:
+            case ElementType.Char:
+            case ElementType.I1:
+            case ElementType.U1:
+            case ElementType.I2:
+            case ElementType.U2:
+            case ElementType.I4:
+            case ElementType.U4:
+                yield return CilOpCodes.Ldc_I4_0;
+                yield return CilOpCodes.Ret;
+                yield break;
+
+            case ElementType.I8:
+            case ElementType.U8:
+                yield return CilOpCodes.Ldc_I4_0;
+                yield return CilOpCodes.Conv_I8;
+                yield return CilOpCodes.Ret;
+                yield break;
+
+            case ElementType.R4:
+                yield return CilOpCodes.Ldc_I4_0;
+                yield return CilOpCodes.Conv_R4;
+                yield return CilOpCodes.Ret;
+                yield break;
+            case ElementType.R8:
+                yield return CilOpCodes.Ldc_I4_0;
+                yield return CilOpCodes.Conv_R8;
+                yield return CilOpCodes.Ret;
+                yield break;
+
+            case ElementType.Void:
+                yield return CilOpCodes.Ret;
+                yield break;
+
+            case ElementType.String:
+            default:
+                yield return CilOpCodes.Ldnull;
+                yield return CilOpCodes.Ret;
+                yield break;
         }
     }
 
