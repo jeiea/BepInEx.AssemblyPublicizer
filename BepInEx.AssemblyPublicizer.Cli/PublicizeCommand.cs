@@ -69,8 +69,15 @@ public sealed class PublicizeCommand : RootCommand
                 return;
             }
 
-            AssemblyPublicizer.Publicize(fileInfo.FullName, outputPath, options);
-            Log.Information("Publicized {InputPath} -> {OutputPath}", fileInfo.Name, outputPath);
+            try
+            {
+                AssemblyPublicizer.Publicize(fileInfo.FullName, outputPath, options);
+                Log.Information("Publicized {InputPath} -> {OutputPath}", fileInfo.Name, outputPath);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Failed to publicize {fileInfo.FullName}", e);
+            }
         }
 
         if (disableParallel || assemblies.Count <= 1)
